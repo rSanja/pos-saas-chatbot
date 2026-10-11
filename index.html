@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem POS & Inventaris Pintar</title>
+    <!-- Memanggil Tailwind CSS untuk desain instan -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Animasi untuk chatbot */
+        .chat-panel { transition: transform 0.3s ease-in-out, opacity 0.3s; }
+        .hidden-chat { transform: translateY(20px); opacity: 0; pointer-events: none; }
+        .visible-chat { transform: translateY(0); opacity: 1; pointer-events: auto; }
+        
+        /* Scrollbar kustom untuk kotak obrolan */
+        #chat-box::-webkit-scrollbar { width: 6px; }
+        #chat-box::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Sembunyikan scrollbar untuk area quick action tapi tetap bisa di-scroll */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm py-4 px-8 flex justify-between items-center">
+        <div class="text-2xl font-bold text-blue-600">POS-SaaS</div>
+        <div class="space-x-4">
+            <a href="#" class="text-gray-600 hover:text-blue-600">Fitur</a>
+            <a href="#" class="text-gray-600 hover:text-blue-600">Harga</a>
+            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700">Coba Gratis</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="max-w-6xl mx-auto px-8 py-20 text-center">
+        <h1 class="text-5xl font-extrabold text-gray-900 mb-6">Kelola Stok & Kasir Lebih Cepat Tanpa Ribet</h1>
+        <p class="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">Tingkatkan efisiensi toko, cafe, atau minimarket Anda dengan aplikasi kasir digital dan manajemen inventaris serba otomatis.</p>
+        <button class="bg-blue-600 text-white px-8 py-4 rounded-full text-lg font-bold hover:bg-blue-700 shadow-lg" onclick="toggleChat()">Tanya AI Konsultan Kami</button>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- FLOATING CHATBOT WIDGET                    -->
+    <!-- ========================================== -->
+
+    <!-- Tombol Melayang (Kanan Bawah) -->
+    <button id="chat-toggle-btn" onclick="toggleChat()" class="fixed bottom-6 right-6 bg-blue-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-2xl hover:bg-blue-700 z-50">
+        💬
+    </button>
+
+    <!-- Panel Chat (Awalnya tersembunyi) -->
+    <div id="chat-panel" class="chat-panel hidden-chat fixed bottom-24 right-6 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style="height: 480px;">
+        <!-- Header Chat -->
+        <div class="bg-blue-600 text-white p-4 flex justify-between items-center shadow-md">
+            <div class="font-bold">🤖 POS-Assist AI</div>
+            <button onclick="toggleChat()" class="text-white hover:text-gray-200 text-xl font-bold">&times;</button>
+        </div>
+        
+        <!-- Area Pesan -->
+        <div id="chat-box" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-gray-50">
+            <div class="bg-white border border-gray-200 text-gray-800 p-3 rounded-lg rounded-tl-none shadow-sm text-sm self-start max-w-[85%]">
+                Halo! Selamat datang di POS-SaaS. Mau cek kecocokan fitur untuk usaha apa nih (misal: toko kelontong, cafe, baju)?
+            </div>
+        </div>
+
+        <!-- Area Quick Actions & Input -->
+        <div class="bg-white border-t border-gray-200 flex flex-col">
+            <!-- Deretan Tombol Quick Action -->
+            <div class="flex gap-2 px-3 py-2 overflow-x-auto whitespace-nowrap hide-scrollbar border-b border-gray-100">
+                <button onclick="sendQuickAction('Saya punya Toko Kelontong, fiturnya apa saja?')" class="bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 text-xs rounded-full hover:bg-blue-100 transition">🏪 Toko Kelontong</button>
+                <button onclick="sendQuickAction('Saya punya Cafe, fiturnya apa saja?')" class="bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 text-xs rounded-full hover:bg-blue-100 transition">☕ Cafe / Resto</button>
+                <button onclick="sendQuickAction('Berapa harga paket langganannya?')" class="bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 text-xs rounded-full hover:bg-blue-100 transition">💰 Cek Harga</button>
+            </div>
+            
+            <!-- Kotak Ketik Manual -->
+            <div class="p-3 flex">
+                <input type="text" id="user-input" class="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" placeholder="Ketik usahamu..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-700 text-sm font-medium">Kirim</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Logika Chatbot -->
+    <script>
+        let chatHistory = [];
+        let isChatOpen = false;
+
+        // Fungsi Buka Tutup Widget Chat
+        function toggleChat() {
+            const panel = document.getElementById('chat-panel');
+            isChatOpen = !isChatOpen;
+            if (isChatOpen) {
+                panel.classList.remove('hidden-chat');
+                panel.classList.add('visible-chat');
+            } else {
+                panel.classList.remove('visible-chat');
+                panel.classList.add('hidden-chat');
+            }
+        }
+
+        // Fungsi untuk Tombol Pilihan Cepat (Quick Action)
+        function sendQuickAction(text) {
+            const inputField = document.getElementById("user-input");
+            inputField.value = text;
+            sendMessage();
+        }
+
+        // Fungsi Utama untuk Mengirim Pesan
+        async function sendMessage() {
+            const inputField = document.getElementById("user-input");
+            const message = inputField.value.trim();
+            if (!message) return; // Jika kosong, batalkan
+
+            appendMessage(message, "user"); // Tampilkan pesan user
+            inputField.value = ""; // Kosongkan kotak ketik
+            const loadingId = appendMessage("Mengetik...", "bot", true);
+
+            try {
+                // Pastikan server Node.js menyala dan port-nya 3000
+                const response = await fetch("http://localhost:3000/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: message, history: chatHistory })
+                });
+
+                const data = await response.json();
+                document.getElementById(loadingId).remove(); // Hapus tulisan "Mengetik..."
+
+                if (data.success) {
+                    appendMessage(data.reply, "bot");
+                    
+                    // Simpan ke riwayat memori percakapan
+                    chatHistory.push({ role: "user", parts: [{ text: message }] });
+                    chatHistory.push({ role: "model", parts: [{ text: data.reply }] });
+                } else {
+                    appendMessage("Error: " + data.error, "bot");
+                }
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                appendMessage("Gagal terhubung ke backend. Pastikan server Node.js menyala.", "bot");
+            }
+        }
+
+        // Fungsi untuk Menempelkan Bubble Chat ke Layar
+        function appendMessage(text, sender, isLoading = false) {
+            const chatBox = document.getElementById("chat-box");
+            const msgDiv = document.createElement("div");
+            
+            if (sender === "user") {
+                // Style untuk User (Biru, rata kanan)
+                msgDiv.className = "bg-blue-600 text-white p-3 rounded-lg rounded-tr-none shadow-sm text-sm self-end max-w-[85%]";
+            } else {
+                // Style untuk Bot (Putih, rata kiri)
+                msgDiv.className = "bg-white border border-gray-200 text-gray-800 p-3 rounded-lg rounded-tl-none shadow-sm text-sm self-start max-w-[85%]";
+                if (isLoading) msgDiv.style.opacity = "0.7";
+            }
+            
+            msgDiv.innerText = text;
+            const id = "msg-" + Date.now();
+            msgDiv.id = id;
+            
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto scroll ke bawah
+            return id;
+        }
+
+        // Fungsi agar bisa tekan 'Enter' di keyboard
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>
